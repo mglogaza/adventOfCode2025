@@ -1,97 +1,79 @@
 package org.example;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
-public class Day4 {
+public class Day5 {
     public static void main(String[] args) throws IOException {
         task1();
         task2();
     }
 
     private static void task1() throws IOException {
-        try (var reader = Util.getInput("/day4.txt")) {
-            int moveablePiles = 0;
-            String previousLine = reader.readLine(), line = reader.readLine(), nextLine;
-            moveablePiles += getMoveablePiles(null, previousLine, line).piles;
-            while ((nextLine = reader.readLine()) != null) {
-                moveablePiles += getMoveablePiles(previousLine, line, nextLine).piles;
-                previousLine = line;
-                line = nextLine;
+        List<Range> ranges = new LinkedList<>();
+        int fresh = 0;
+        try (var reader = Util.getInput("/day5.txt")) {
+            String nextLine;
+            while (!(nextLine = reader.readLine()).trim().isEmpty()) {
+                ranges.add(new Range(nextLine.split("-")));
             }
-            moveablePiles += getMoveablePiles(previousLine, line, null).piles;
+            while ((nextLine = reader.readLine()) != null) {
+                long id = Long.parseLong(nextLine);
+                fresh += isFresh(id, ranges) ? 1 : 0;
+            }
 
-            System.out.println("Part 1 moveable piles: " + moveablePiles);
+            System.out.println("Part 1 fresh: " + fresh);
         }
     }
 
     private static void task2() throws IOException {
-
-        try (var reader = Util.getInput("/day4.txt")) {
-            List<String> input = new ArrayList<>();
-            String inputLine;
-            while ((inputLine = reader.readLine()) != null) {
-                input.add(inputLine);
-            }
-            int totalMoveablePiles = 0, moveablePiles;
-            do {
-                moveablePiles = 0;
-                List<String> nextInput = new ArrayList<>();
-                String previousLine = input.get(0), line = input.get(1), nextLine;
-                PilesAndNewLine lineAndPiles = getMoveablePiles(null, previousLine, line);
-                moveablePiles += lineAndPiles.piles;
-                nextInput.add(lineAndPiles.newLine);
-                for (int i = 2; i < input.size(); i++) {
-                    nextLine = input.get(i);
-                    lineAndPiles = getMoveablePiles(previousLine, line, nextLine);
-                    moveablePiles += lineAndPiles.piles;
-                    nextInput.add(lineAndPiles.newLine);
-                    previousLine = line;
-                    line = nextLine;
+        List<Range> ranges = new LinkedList<>();
+        try (var reader = Util.getInput("/day5.txt")) {
+            String nextLine;
+            while (!(nextLine = reader.readLine()).trim().isEmpty()) {
+                var split = nextLine.split("-");
+                long low = Long.parseLong(split[0]);
+                long high = Long.parseLong(split[1]);
+                List<Range> toRemove = new LinkedList<>();
+                for(var range : ranges){
+                    if(range.low> low && range.high < high){
+                        toRemove.add(range);
+                    }
+                    if(low >= range.low && low <= range.high){
+                        low = range.high + 1;
+                    }
+                    if(high >= range.low && high <= range.high){
+                        high = range.low -1;
+                    }
                 }
-                lineAndPiles = getMoveablePiles(previousLine, line, null);
-                moveablePiles += lineAndPiles.piles;
-                nextInput.add(lineAndPiles.newLine);
-                totalMoveablePiles += moveablePiles;
-                input = nextInput;
-            } while (moveablePiles != 0);
-            System.out.println("Part 2 moveable piles: " + totalMoveablePiles);
+                ranges.removeAll(toRemove);
+                toRemove.clear();
+                if(low <= high){
+                    ranges.add(new Range(low,high));
+                }
+            }
+            long freshIds = 0;
+            for(var range: ranges){
+                freshIds += range.high - range.low + 1;
+            }
+
+            System.out.println(ranges);
+            System.out.println("Part 2 fresh ids: " + freshIds);
         }
     }
 
-    private static PilesAndNewLine getMoveablePiles(String previousLine, String line, String nextLine) {
-        int moveablePiles = 0;
-        StringBuilder newLine = new StringBuilder();
-        for (int i = 0; i < line.length(); i++) {
-            if (line.charAt(i) == '@') {
-                int piles = 0;
-                piles += previousLine != null ? countPiles(i, previousLine) : 0;
-                piles += countPiles(i, line) - 1;
-                piles += nextLine != null ? countPiles(i, nextLine) : 0;
-                if (piles < 4) {
-                    moveablePiles++;
-                    newLine.append('X');
-                } else {
-                    newLine.append(line.charAt(i));
-                }
-            } else {
-                newLine.append(line.charAt(i));
+    private static boolean isFresh(long id, List<Range> ranges){
+        for(var range : ranges){
+            if(id >= range.low && id <= range.high){
+                return true;
             }
         }
-        return new PilesAndNewLine(moveablePiles, newLine.toString());
+        return false;
     }
 
-    private static int countPiles(int i, String line) {
-        int piles = 0;
-        if (i - 1 >= 0) piles += (line.charAt(i - 1) == '@') ? 1 : 0;
-        piles += (line.charAt(i) == '@') ? 1 : 0;
-        if (i + 1 < line.length()) piles += (line.charAt(i + 1) == '@') ? 1 : 0;
-        return piles;
-    }
-
-    record PilesAndNewLine(int piles, String newLine) {
-    }
-
-    ;
+    record Range(long low,long high){
+        public Range(String[] split) {
+            this(Long.parseLong(split[0]),Long.parseLong(split[1]));
+        }
+    };
 }
